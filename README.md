@@ -8,6 +8,7 @@ project plan, report, spec, SOP, etc).
 ```
 POST /agent   {"request": "..."}   ->   plan + reflection notes + downloadable .docx
 ```
+**Live demo:** https://autonomous-document-agent.onrender.com
 
 ## 1. Setup (5 minutes)
 
