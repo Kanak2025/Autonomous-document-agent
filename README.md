@@ -159,7 +159,7 @@ curl -X POST http://127.0.0.1:8000/agent \
   -d '{"request": "Create meeting minutes for our weekly engineering sync..."}'
 ```
 
-## 5. Debugging Insight (for the video)
+## 5. Debugging Insight
 
 **Issue:** with `response_format: json_object` set on Groq, the planning
 step still occasionally returned JSON wrapped in a ` ```json ... ``` `
@@ -179,7 +179,7 @@ intermittent 500 into a non-issue, and it's covered by the same function
 everywhere the agent expects JSON back (planning _and_ reflection), rather
 than being special-cased once and forgotten in the second call site.
 
-## 6. Tradeoff Discussion (for the video)
+## 6. Tradeoff Discussion
 
 **Autonomous Planning vs. Deterministic Workflows.** The agent asks the LLM
 to invent its own section list and task breakdown per request, rather than
