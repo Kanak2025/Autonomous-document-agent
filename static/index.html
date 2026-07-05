@@ -127,16 +127,65 @@
         background: var(--rust);
       }
 
+      #rate-badge {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 13px;
+        padding: 8px 14px;
+        border-radius: 20px;
+        border: 1px solid var(--line);
+        white-space: nowrap;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        background: var(--paper-raised);
+      }
+      #rate-badge .dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #999;
+      }
+      #rate-badge.ok .dot {
+        background: var(--sage);
+      }
+      #rate-badge.warn .dot {
+        background: var(--brass);
+      }
+      #rate-badge.bad .dot {
+        background: var(--rust);
+      }
+      #rate-badge.warn {
+        color: #6b5215;
+      }
+      #rate-badge.bad {
+        color: #5c3620;
+      }
+
       .grid {
         display: grid;
         grid-template-columns: 1.2fr 1fr;
         gap: 28px;
-        align-items: start;
+        align-items: stretch;
       }
       @media (max-width: 880px) {
         .grid {
           grid-template-columns: 1fr;
         }
+      }
+      .grid > .card {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+      }
+      .grid > .card:not(.request-card) {
+        justify-content: center;
+      }
+      .request-card textarea {
+        flex: 1;
+      }
+      .request-card .examples,
+      .request-card button.run {
+        flex-shrink: 0;
       }
 
       .facts-row {
@@ -556,9 +605,15 @@
               Word document.
             </div>
           </div>
-          <div id="health-badge">
-            <span class="dot"></span
-            ><span id="health-text">checking connection&hellip;</span>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap">
+            <div id="health-badge">
+              <span class="dot"></span
+              ><span id="health-text">checking connection&hellip;</span>
+            </div>
+            <div id="rate-badge" style="display: none">
+              <span class="dot"></span
+              ><span id="rate-text">rate limit unknown</span>
+            </div>
           </div>
         </header>
 
@@ -609,6 +664,30 @@
           </div>
         </div>
 
+        <div class="card result" id="result-card" style="margin-top: 28px">
+          <div class="doc-type" id="doc-type"></div>
+          <div class="doc-title" id="doc-title"></div>
+
+          <ul class="assumptions" id="assumptions"></ul>
+
+          <div id="reflect-banner"></div>
+
+          <ul class="sections" id="sections-list"></ul>
+
+          <a class="download" id="download-link" href="#" download
+            >&#8681;&nbsp; Download .docx</a
+          >
+
+          <details>
+            <summary>View raw agent response (JSON)</summary>
+            <pre id="raw-json"></pre>
+          </details>
+        </div>
+
+        <div class="card result" id="error-card" style="margin-top: 28px">
+          <div class="error-box" id="error-box"></div>
+        </div>
+
         <div class="card facts-card facts-row">
           <h2>Quick facts</h2>
           <div class="facts-body">
@@ -643,30 +722,6 @@
           </div>
         </div>
 
-        <div class="card result" id="result-card" style="margin-top: 28px">
-          <div class="doc-type" id="doc-type"></div>
-          <div class="doc-title" id="doc-title"></div>
-
-          <ul class="assumptions" id="assumptions"></ul>
-
-          <div id="reflect-banner"></div>
-
-          <ul class="sections" id="sections-list"></ul>
-
-          <a class="download" id="download-link" href="#" download
-            >&#8681;&nbsp; Download .docx</a
-          >
-
-          <details>
-            <summary>View raw agent response (JSON)</summary>
-            <pre id="raw-json"></pre>
-          </details>
-        </div>
-
-        <div class="card result" id="error-card" style="margin-top: 28px">
-          <div class="error-box" id="error-box"></div>
-        </div>
-
         <footer class="site-footer">
           <span
             >Autonomous Document Agent &middot; plan &rarr; execute &rarr;
@@ -695,6 +750,33 @@
         });
       });
 
+      // Reads whichever rate-limit shape the backend happens to expose.
+      // Supports: { rate_limit: { remaining, limit, reset_seconds } } from
+      // /health, or raw Retry-After / x-ratelimit-* response headers on any
+      // fetch (e.g. after proxying Groq's own rate-limit headers through).
+      function setRateBadge({ remaining, limit, resetSeconds, unknown }) {
+        const badge = document.getElementById("rate-badge");
+        const text = document.getElementById("rate-text");
+        badge.style.display = "flex";
+        badge.classList.remove("ok", "warn", "bad");
+
+        if (unknown || remaining === undefined || remaining === null) {
+          text.textContent = "rate limit: not reported by backend";
+          badge.classList.add("warn");
+          return;
+        }
+
+        const pct = limit ? remaining / limit : null;
+        let label =
+          "rate limit: " + remaining + (limit ? "/" + limit : "") + " left";
+        if (resetSeconds) label += " (resets in " + resetSeconds + "s)";
+        text.textContent = label;
+
+        if (remaining <= 0) badge.classList.add("bad");
+        else if (pct !== null && pct <= 0.2) badge.classList.add("warn");
+        else badge.classList.add("ok");
+      }
+
       async function checkHealth() {
         const badge = document.getElementById("health-badge");
         const text = document.getElementById("health-text");
@@ -710,9 +792,20 @@
             badge.classList.add("bad");
             text.textContent = "No API key configured";
           }
+
+          if (data.rate_limit) {
+            setRateBadge({
+              remaining: data.rate_limit.remaining,
+              limit: data.rate_limit.limit,
+              resetSeconds: data.rate_limit.reset_seconds,
+            });
+          } else {
+            setRateBadge({ unknown: true });
+          }
         } catch (e) {
           badge.classList.add("bad");
           text.textContent = "Server unreachable";
+          setRateBadge({ unknown: true });
         }
       }
       checkHealth();
@@ -792,6 +885,18 @@
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ request: requestText }),
           });
+
+          if (resp.status === 429) {
+            finishDocket();
+            const retryAfter = resp.headers.get("Retry-After");
+            errorCard.classList.add("show");
+            document.getElementById("error-box").textContent = retryAfter
+              ? "Rate limit hit. Try again in about " + retryAfter + "s."
+              : "Rate limit hit. Wait a moment and try again, or switch to a lower-traffic model (see Quick facts).";
+            setRateBadge({ remaining: 0, resetSeconds: retryAfter || null });
+            return;
+          }
+
           const data = await resp.json();
 
           if (!resp.ok) {
@@ -805,6 +910,13 @@
           finishDocket();
           renderResult(data);
           resultCard.classList.add("show");
+          if (data.rate_limit) {
+            setRateBadge({
+              remaining: data.rate_limit.remaining,
+              limit: data.rate_limit.limit,
+              resetSeconds: data.rate_limit.reset_seconds,
+            });
+          }
         } catch (e) {
           finishDocket();
           errorCard.classList.add("show");

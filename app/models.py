@@ -43,3 +43,4 @@ class AgentResponse(BaseModel):
     download_url: str
     section_word_counts: Dict[str, int] = {}
     engine_meta: Dict[str, Any] = {}
+    rate_limit: Optional[Dict[str, Any]] = None

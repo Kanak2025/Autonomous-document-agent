@@ -10,6 +10,7 @@ from app.config import settings
 from app.models import AgentRequest, AgentResponse
 from app.planner import run_agent_pipeline, GuardrailError
 from app.doc_generator import build_document
+from app.llm_client import get_rate_limit_info
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("agent.api")
@@ -31,7 +32,12 @@ def serve_ui():
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "llm_configured": bool(settings.GROQ_API_KEY), "model": settings.GROQ_MODEL}
+    return {
+        "status": "ok",
+        "llm_configured": bool(settings.GROQ_API_KEY),
+        "model": settings.GROQ_MODEL,
+        "rate_limit": get_rate_limit_info(),
+    }
 
 
 @app.post("/agent", response_model=AgentResponse)
@@ -68,6 +74,7 @@ def run_agent(payload: AgentRequest):
         download_url=f"/files/{filename}",
         section_word_counts=word_counts,
         engine_meta={"model": settings.GROQ_MODEL, "provider": "groq"},
+        rate_limit=get_rate_limit_info(),
     )
 
 

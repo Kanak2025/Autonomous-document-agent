@@ -9,7 +9,7 @@ services:
       - key: GROQ_API_KEY
         sync: false # set manually in the Render dashboard — never committed to git
       - key: GROQ_MODEL
-        value: llama-3.3-70b-versatile
+        value: llama-3.1-8b-instant
       - key: OUTPUT_DIR
         value: output
       - key: PYTHON_VERSION
