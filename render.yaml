@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: autonomous-document-agent
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false # set manually in the Render dashboard — never committed to git
+      - key: GROQ_MODEL
+        value: llama-3.3-70b-versatile
+      - key: OUTPUT_DIR
+        value: output
+      - key: PYTHON_VERSION
+        value: 3.11.9

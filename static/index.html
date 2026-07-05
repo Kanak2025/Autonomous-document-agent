@@ -1,0 +1,873 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Autonomous Document Agent</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --ink: #1b2a3a;
+        --paper: #f7f5ef;
+        --paper-raised: #ffffff;
+        --brass: #ad8a4e;
+        --brass-dim: #e4d6b8;
+        --sage: #5c7a5c;
+        --sage-dim: #dce6dc;
+        --rust: #a0522d;
+        --rust-dim: #eeddd2;
+        --line: #ddd6c6;
+        --ink-soft: #5b6572;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        background: #ede9dd;
+      }
+      body {
+        margin: 0;
+        background: #ede9dd;
+        color: var(--ink);
+        font-family: "Inter", sans-serif;
+        font-size: 17px;
+        line-height: 1.6;
+      }
+      .page-frame {
+        max-width: 1480px;
+        margin: 36px auto;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--paper);
+        box-shadow: 0 1px 3px rgba(27, 42, 58, 0.05);
+      }
+      .wrap {
+        max-width: 1340px;
+        margin: 0 auto;
+        padding: 60px 48px 96px;
+      }
+      @media (max-width: 700px) {
+        .page-frame {
+          margin: 16px;
+          border-radius: 8px;
+        }
+        .wrap {
+          padding: 36px 22px 60px;
+        }
+      }
+
+      header.top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        border-bottom: 1px solid var(--line);
+        padding-bottom: 28px;
+        margin-bottom: 40px;
+        gap: 24px;
+        flex-wrap: wrap;
+      }
+      .eyebrow {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 13px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--brass);
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .eyebrow .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--brass);
+        display: inline-block;
+      }
+      h1 {
+        font-family: "Fraunces", serif;
+        font-weight: 600;
+        font-size: clamp(32px, 4.4vw, 46px);
+        margin: 0 0 10px;
+        line-height: 1.08;
+        letter-spacing: -0.01em;
+      }
+      .sub {
+        color: var(--ink-soft);
+        font-size: 16.5px;
+        max-width: 560px;
+      }
+
+      #health-badge {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 13px;
+        padding: 8px 14px;
+        border-radius: 20px;
+        border: 1px solid var(--line);
+        white-space: nowrap;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        background: var(--paper-raised);
+      }
+      #health-badge .dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #999;
+      }
+      #health-badge.ok .dot {
+        background: var(--sage);
+      }
+      #health-badge.bad .dot {
+        background: var(--rust);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1.2fr 1fr;
+        gap: 28px;
+        align-items: start;
+      }
+      @media (max-width: 880px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .facts-row {
+        margin-top: 28px;
+      }
+
+      .card {
+        background: var(--paper-raised);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 32px;
+      }
+      .card h2 {
+        font-family: "Fraunces", serif;
+        font-size: 21px;
+        font-weight: 600;
+        margin: 0 0 20px;
+      }
+      .card.request-card {
+        padding: 38px;
+      }
+      .card.request-card h2 {
+        font-size: 23px;
+        margin-bottom: 24px;
+      }
+      .card.facts-card {
+        padding: 40px;
+      }
+      .card.facts-card h2 {
+        font-size: 23px;
+        margin-bottom: 24px;
+      }
+      .facts-card .facts-body {
+        display: grid;
+        grid-template-columns: 1.3fr 1fr;
+        gap: 40px;
+        align-items: start;
+      }
+      @media (max-width: 700px) {
+        .facts-card .facts-body {
+          grid-template-columns: 1fr;
+        }
+      }
+      .stat-grid {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px 28px;
+      }
+      .stat-grid li {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .stat-grid .stat-label {
+        font-size: 14px;
+        color: var(--ink-soft);
+      }
+      .stat-grid .stat-val {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 18px;
+        color: var(--ink);
+      }
+
+      textarea {
+        width: 100%;
+        min-height: 160px;
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        padding: 16px;
+        font-family: "Inter", sans-serif;
+        font-size: 16px;
+        resize: vertical;
+        background: var(--paper);
+        color: var(--ink);
+      }
+      .request-card textarea {
+        min-height: 220px;
+        padding: 20px;
+        font-size: 18px;
+        line-height: 1.6;
+        border-radius: 6px;
+      }
+      textarea:focus {
+        outline: 2px solid var(--brass);
+        outline-offset: 1px;
+      }
+      .request-card .examples {
+        margin: 20px 0 26px;
+        gap: 10px;
+      }
+      .request-card .chip {
+        font-size: 13.5px;
+        padding: 8px 14px;
+      }
+      .request-card button.run {
+        font-size: 17px;
+        padding: 17px 26px;
+        border-radius: 6px;
+      }
+
+      .examples {
+        display: flex;
+        gap: 8px;
+        margin: 16px 0 22px;
+        flex-wrap: wrap;
+      }
+      .chip {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 12.5px;
+        padding: 7px 12px;
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        background: var(--paper);
+        cursor: pointer;
+        color: var(--ink-soft);
+      }
+      .chip:hover {
+        border-color: var(--brass);
+        color: var(--brass);
+      }
+
+      button.run {
+        font-family: "Inter", sans-serif;
+        font-weight: 600;
+        font-size: 16px;
+        background: var(--ink);
+        color: var(--paper);
+        border: none;
+        border-radius: 5px;
+        padding: 15px 24px;
+        cursor: pointer;
+        width: 100%;
+      }
+      button.run:hover {
+        background: #2b3d52;
+      }
+      button.run:disabled {
+        background: #b8bec6;
+        cursor: not-allowed;
+      }
+
+      .docket {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      .docket li {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 0;
+        border-bottom: 1px solid var(--line);
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 14.5px;
+        color: var(--ink-soft);
+      }
+      .docket li:last-child {
+        border-bottom: none;
+      }
+      .stage-dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        border: 1.5px solid var(--line);
+        flex-shrink: 0;
+        transition: all 0.3s ease;
+      }
+      .docket li.active .stage-dot {
+        border-color: var(--brass);
+        background: var(--brass);
+        animation: pulse 1s infinite;
+      }
+      .docket li.done .stage-dot {
+        border-color: var(--sage);
+        background: var(--sage);
+      }
+      .docket li.active,
+      .docket li.done {
+        color: var(--ink);
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.35;
+        }
+      }
+
+      #empty-state {
+        color: var(--ink-soft);
+        font-size: 14.5px;
+        padding: 8px 0 4px;
+      }
+
+      .result {
+        display: none;
+      }
+      .result.show {
+        display: block;
+      }
+
+      .doc-title {
+        font-family: "Fraunces", serif;
+        font-size: 26px;
+        font-weight: 600;
+        margin: 2px 0 6px;
+      }
+      .doc-type {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 12.5px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--brass);
+        margin-bottom: 18px;
+      }
+
+      .assumptions {
+        margin: 0 0 22px;
+        padding: 0;
+        list-style: none;
+      }
+      .assumptions li {
+        background: var(--brass-dim);
+        border-left: 3px solid var(--brass);
+        padding: 11px 14px;
+        margin-bottom: 8px;
+        font-size: 14.5px;
+        border-radius: 3px;
+      }
+
+      .reflect-banner {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 13px 16px;
+        border-radius: 5px;
+        font-size: 14.5px;
+        margin-bottom: 20px;
+      }
+      .reflect-banner.pass {
+        background: var(--sage-dim);
+        color: #33473a;
+      }
+      .reflect-banner.fixed {
+        background: var(--rust-dim);
+        color: #5c3620;
+      }
+      .reflect-banner .badge-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+      .reflect-banner.pass .badge-dot {
+        background: var(--sage);
+      }
+      .reflect-banner.fixed .badge-dot {
+        background: var(--rust);
+      }
+
+      .sections {
+        margin: 0 0 22px;
+        padding: 0;
+        list-style: none;
+      }
+      .sections li {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 0;
+        border-bottom: 1px dashed var(--line);
+        font-size: 15px;
+      }
+      .sections li:last-child {
+        border-bottom: none;
+      }
+      .sections .wc {
+        font-family: "IBM Plex Mono", monospace;
+        color: var(--ink-soft);
+        font-size: 13px;
+      }
+
+      .stat-list {
+        list-style: none;
+        margin: 0 0 4px;
+        padding: 0;
+      }
+      .stat-list li {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        padding: 15px 0;
+        border-bottom: 1px solid var(--line);
+        font-size: 16px;
+        color: var(--ink-soft);
+      }
+      .stat-list li:last-child {
+        border-bottom: none;
+      }
+      .stat-list .stat-val {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 15px;
+        color: var(--ink);
+        text-align: right;
+      }
+
+      .about-note {
+        font-size: 16px;
+        color: var(--ink-soft);
+        padding: 0 0 0 32px;
+        margin: 0;
+        border-left: 1px solid var(--line);
+        line-height: 1.7;
+      }
+      @media (max-width: 700px) {
+        .about-note {
+          border-left: none;
+          border-top: 1px dashed var(--line);
+          padding: 20px 0 0;
+          margin-top: 8px;
+        }
+      }
+      .about-note strong {
+        color: var(--ink);
+      }
+
+      footer.site-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 14px;
+        margin-top: 52px;
+        padding-top: 26px;
+        border-top: 1px solid var(--line);
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 12.5px;
+        color: var(--ink-soft);
+      }
+      footer.site-footer a {
+        color: var(--brass);
+        text-decoration: none;
+      }
+      footer.site-footer a:hover {
+        text-decoration: underline;
+      }
+      footer.site-footer .footer-links {
+        display: flex;
+        gap: 18px;
+        flex-wrap: wrap;
+      }
+
+      a.download {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: var(--ink);
+        color: var(--paper);
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 15.5px;
+        padding: 14px 22px;
+        border-radius: 5px;
+      }
+      a.download:hover {
+        background: #2b3d52;
+      }
+
+      details {
+        margin-top: 20px;
+      }
+      summary {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 13px;
+        color: var(--ink-soft);
+        cursor: pointer;
+      }
+      pre {
+        background: var(--ink);
+        color: #d9e2ec;
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 12.5px;
+        padding: 18px;
+        border-radius: 5px;
+        overflow-x: auto;
+        margin-top: 12px;
+        max-height: 320px;
+      }
+
+      .error-box {
+        background: var(--rust-dim);
+        border-left: 3px solid var(--rust);
+        padding: 14px 16px;
+        border-radius: 3px;
+        font-size: 14.5px;
+        color: #5c3620;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page-frame">
+      <div class="wrap">
+        <header class="top">
+          <div>
+            <div class="eyebrow">
+              <span class="dot"></span>Plan &middot; Execute &middot; Reflect
+              &middot; Render
+            </div>
+            <h1>Autonomous Document Agent</h1>
+            <div class="sub">
+              Describe what you need. The agent plans its own section structure,
+              drafts every part, checks its own work, and hands back a finished
+              Word document.
+            </div>
+          </div>
+          <div id="health-badge">
+            <span class="dot"></span
+            ><span id="health-text">checking connection&hellip;</span>
+          </div>
+        </header>
+
+        <div class="grid">
+          <div class="card request-card">
+            <h2>Request</h2>
+            <textarea
+              id="request-input"
+              placeholder="e.g. Create meeting minutes for our weekly engineering sync on July 3rd, 2026. Attendees: Priya (Eng Lead), Sam (Backend)&hellip;"
+            ></textarea>
+            <div class="examples">
+              <span class="chip" data-fill="standard"
+                >Try: standard request</span
+              >
+              <span class="chip" data-fill="complex"
+                >Try: ambiguous request</span
+              >
+            </div>
+            <button class="run" id="run-btn">Run agent</button>
+          </div>
+
+          <div class="card">
+            <h2>Pipeline</h2>
+            <ul class="docket" id="docket">
+              <li data-stage="guardrails">
+                <span class="stage-dot"></span>Guardrails &mdash; validating
+                request
+              </li>
+              <li data-stage="plan">
+                <span class="stage-dot"></span>Plan &mdash; deciding document
+                type &amp; sections
+              </li>
+              <li data-stage="execute">
+                <span class="stage-dot"></span>Execute &mdash; drafting each
+                section
+              </li>
+              <li data-stage="reflect">
+                <span class="stage-dot"></span>Reflect &mdash; self-checking the
+                draft
+              </li>
+              <li data-stage="render">
+                <span class="stage-dot"></span>Render &mdash; building the .docx
+              </li>
+            </ul>
+            <div id="empty-state">
+              Run a request to see the agent work through each stage.
+            </div>
+          </div>
+        </div>
+
+        <div class="card facts-card facts-row">
+          <h2>Quick facts</h2>
+          <div class="facts-body">
+            <ul class="stat-grid">
+              <li>
+                <span class="stat-label">LLM provider</span
+                ><span class="stat-val" id="stat-model">Groq</span>
+              </li>
+              <li>
+                <span class="stat-label">Pipeline stages</span
+                ><span class="stat-val">5</span>
+              </li>
+              <li>
+                <span class="stat-label">Self-repair passes</span
+                ><span class="stat-val">max 1</span>
+              </li>
+              <li>
+                <span class="stat-label">Output format</span
+                ><span class="stat-val">.docx</span>
+              </li>
+              <li>
+                <span class="stat-label">Typical run time</span
+                ><span class="stat-val">30&ndash;90s</span>
+              </li>
+            </ul>
+            <p class="about-note">
+              <strong>Why reflection matters:</strong> after drafting, a fifth
+              LLM call re-reads the whole document against your original request
+              and rewrites any section that's generic, missing, or off-target
+              &mdash; before you ever see it.
+            </p>
+          </div>
+        </div>
+
+        <div class="card result" id="result-card" style="margin-top: 28px">
+          <div class="doc-type" id="doc-type"></div>
+          <div class="doc-title" id="doc-title"></div>
+
+          <ul class="assumptions" id="assumptions"></ul>
+
+          <div id="reflect-banner"></div>
+
+          <ul class="sections" id="sections-list"></ul>
+
+          <a class="download" id="download-link" href="#" download
+            >&#8681;&nbsp; Download .docx</a
+          >
+
+          <details>
+            <summary>View raw agent response (JSON)</summary>
+            <pre id="raw-json"></pre>
+          </details>
+        </div>
+
+        <div class="card result" id="error-card" style="margin-top: 28px">
+          <div class="error-box" id="error-box"></div>
+        </div>
+
+        <footer class="site-footer">
+          <span
+            >Autonomous Document Agent &middot; plan &rarr; execute &rarr;
+            reflect &rarr; render</span
+          >
+          <span class="footer-links">
+            <a href="/docs" target="_blank">API reference</a>
+            <a href="/health" target="_blank">Health check</a>
+          </span>
+        </footer>
+      </div>
+    </div>
+
+    <script>
+      const API = window.location.origin;
+
+      const STANDARD =
+        "Create meeting minutes for our weekly engineering sync held on July 3rd, 2026. Attendees: Priya (Eng Lead), Sam (Backend), Jordan (Frontend), Ana (QA). We discussed the API rate-limiting rollout, a bug in checkout flow, and Q3 hiring plan. Action items should be assigned to owners with due dates.";
+      const COMPLEX =
+        "We need something to send the client about our new product before Friday, but I'm not sure if it should be a proposal or a spec -- honestly whatever gets us the deal fastest. Budget is 'flexible' but also we were told last month not to go over 50k. The client wants it 'enterprise-grade' but also wants a two-week turnaround. Just make it look good and cover whatever a serious buyer would expect.";
+
+      document.querySelectorAll(".chip").forEach((chip) => {
+        chip.addEventListener("click", () => {
+          document.getElementById("request-input").value =
+            chip.dataset.fill === "standard" ? STANDARD : COMPLEX;
+        });
+      });
+
+      async function checkHealth() {
+        const badge = document.getElementById("health-badge");
+        const text = document.getElementById("health-text");
+        const statModel = document.getElementById("stat-model");
+        try {
+          const r = await fetch(API + "/health");
+          const data = await r.json();
+          if (data.llm_configured) {
+            badge.classList.add("ok");
+            text.textContent = "LLM connected (" + (data.model || "groq") + ")";
+            if (statModel && data.model) statModel.textContent = data.model;
+          } else {
+            badge.classList.add("bad");
+            text.textContent = "No API key configured";
+          }
+        } catch (e) {
+          badge.classList.add("bad");
+          text.textContent = "Server unreachable";
+        }
+      }
+      checkHealth();
+
+      const stageOrder = ["guardrails", "plan", "execute", "reflect", "render"];
+      // Rough expected duration per stage, purely for the visual stepper --
+      // the real completion signal is the fetch() response itself.
+      const stageTiming = [400, 3500, 9000, 4000, 800];
+
+      let stageTimers = [];
+
+      function resetDocket() {
+        stageTimers.forEach((t) => clearTimeout(t));
+        stageTimers = [];
+        document
+          .querySelectorAll(".docket li")
+          .forEach((li) => li.classList.remove("active", "done"));
+      }
+
+      function animateDocket() {
+        resetDocket();
+        let elapsed = 0;
+        stageOrder.forEach((stage, i) => {
+          const li = document.querySelector('[data-stage="' + stage + '"]');
+          stageTimers.push(
+            setTimeout(() => {
+              document
+                .querySelectorAll(".docket li")
+                .forEach((l) => l.classList.remove("active"));
+              li.classList.add("active");
+            }, elapsed),
+          );
+          elapsed += stageTiming[i];
+          if (i > 0) {
+            const prevLi = document.querySelector(
+              '[data-stage="' + stageOrder[i - 1] + '"]',
+            );
+            stageTimers.push(
+              setTimeout(() => prevLi.classList.add("done"), elapsed),
+            );
+          }
+        });
+      }
+
+      function finishDocket() {
+        stageTimers.forEach((t) => clearTimeout(t));
+        document.querySelectorAll(".docket li").forEach((li) => {
+          li.classList.remove("active");
+          li.classList.add("done");
+        });
+      }
+
+      document.getElementById("run-btn").addEventListener("click", async () => {
+        const requestText = document
+          .getElementById("request-input")
+          .value.trim();
+        const btn = document.getElementById("run-btn");
+        const resultCard = document.getElementById("result-card");
+        const errorCard = document.getElementById("error-card");
+        const emptyState = document.getElementById("empty-state");
+
+        if (!requestText) {
+          alert("Enter a request first.");
+          return;
+        }
+
+        resultCard.classList.remove("show");
+        errorCard.classList.remove("show");
+        emptyState.style.display = "none";
+        btn.disabled = true;
+        btn.textContent = "Working\u2026 (free-tier LLM, can take 30-90s)";
+        animateDocket();
+
+        try {
+          const resp = await fetch(API + "/agent", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ request: requestText }),
+          });
+          const data = await resp.json();
+
+          if (!resp.ok) {
+            finishDocket();
+            errorCard.classList.add("show");
+            document.getElementById("error-box").textContent =
+              data.detail || "Request failed.";
+            return;
+          }
+
+          finishDocket();
+          renderResult(data);
+          resultCard.classList.add("show");
+        } catch (e) {
+          finishDocket();
+          errorCard.classList.add("show");
+          document.getElementById("error-box").textContent =
+            "Could not reach the API: " + e.message;
+        } finally {
+          btn.disabled = false;
+          btn.textContent = "Run agent";
+        }
+      });
+
+      function renderResult(data) {
+        document.getElementById("doc-type").textContent = (
+          data.plan.document_type || ""
+        ).replaceAll("_", " ");
+        document.getElementById("doc-title").textContent = data.plan.title;
+
+        const assumptionsEl = document.getElementById("assumptions");
+        assumptionsEl.innerHTML = "";
+        (data.plan.assumptions || []).forEach((a) => {
+          const li = document.createElement("li");
+          li.textContent = a;
+          assumptionsEl.appendChild(li);
+        });
+
+        const banner = document.getElementById("reflect-banner");
+        const refl = data.reflection || {};
+        if (refl.revised_sections && refl.revised_sections.length) {
+          banner.className = "reflect-banner fixed";
+          banner.innerHTML =
+            '<span class="badge-dot"></span> Self-check flagged and repaired: ' +
+            refl.revised_sections.join(", ");
+        } else if (refl.passed) {
+          banner.className = "reflect-banner pass";
+          banner.innerHTML =
+            '<span class="badge-dot"></span> Self-check passed \u2014 no issues found';
+        } else {
+          banner.className = "reflect-banner fixed";
+          banner.innerHTML =
+            '<span class="badge-dot"></span> Self-check flagged issues (see raw JSON)';
+        }
+
+        const sectionsEl = document.getElementById("sections-list");
+        sectionsEl.innerHTML = "";
+        const counts = data.section_word_counts || {};
+        (data.plan.sections || []).forEach((s) => {
+          const li = document.createElement("li");
+          li.innerHTML =
+            "<span>" +
+            s +
+            '</span><span class="wc">' +
+            (counts[s] || 0) +
+            " words</span>";
+          sectionsEl.appendChild(li);
+        });
+
+        document.getElementById("download-link").href = API + data.download_url;
+        document.getElementById("raw-json").textContent = JSON.stringify(
+          data,
+          null,
+          2,
+        );
+      }
+    </script>
+  </body>
+</html>
